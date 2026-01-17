@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="canonical" href="https://aegis-dm-toolkit.com/player.html" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aegis | Player Uplink</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: sans-serif; }
+        .active-turn { border: 2px solid #34d399; background-color: rgba(52, 211, 153, 0.1); transform: scale(1.02); z-index: 30; }
+        .input-dark { background-color: #1e293b; border: 1px solid #334155; color: white; padding: 8px; border-radius: 6px; outline: none; width: 100%; }
+        .input-dark:focus { border-color: #6366f1; }
+        .tab-button { padding: 8px 12px; font-weight: bold; transition: all 0.2s; cursor: pointer; border-radius: 8px 8px 0 0; border-bottom: 2px solid transparent; }
+        .tab-button.active { color: #818cf8; border-bottom-color: #6366f1; background-color: #1e293b; }
+        .no-select { user-select: none; -webkit-user-select: none; }
+    </style>
+</head>
+<body class="p-4 max-w-md mx-auto">
+
+    <div class="mb-6 text-center">
+        <h1 class="text-2xl font-bold text-indigo-400 tracking-widest">BATTLE LINK</h1>
+        <div id="status" class="text-xs text-gray-500">Connecting...</div>
+    </div>
+
+    <div class="flex border-b border-gray-700 mb-4">
+        <div id="tab-btn-init" class="tab-button active text-gray-400 hover:text-indigo-400" onclick="showTab('init')">Combat & Initiative</div>
+        <div id="tab-btn-data" class="tab-button text-gray-400 hover:text-indigo-400" onclick="showTab('data')">My Sheet Link</div>
+    </div>
+
+    <div id="init-form" class="tab-content bg-gray-800/50 p-4 rounded-xl border border-indigo-500/30 mb-6 shadow-lg">
+        <h3 class="text-sm font-bold text-indigo-300 mb-3 uppercase tracking-wider">Join Initiative</h3>
+
+        <div class="space-y-3 pb-4 border-b border-gray-700 mb-4">
+            <div>
+                <label class="text-[10px] text-gray-400 uppercase font-bold">Character Name</label>
+                <input type="text" id="p-name" class="input-dark" placeholder="e.g. Aragorn">
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+                <div><label class="text-[10px] text-gray-400 uppercase font-bold">Init Roll</label><input type="number" id="p-init" class="input-dark text-center" placeholder="d20+Mod"></div>
+                <div><label class="text-[10px] text-gray-400 uppercase font-bold">AC</label><input type="number" id="p-ac" class="input-dark text-center" placeholder="15"></div>
+                <div><label class="text-[10px] text-gray-400 uppercase font-bold">Max HP</label><input type="number" id="p-hp" class="input-dark text-center" placeholder="Max"></div>
+            </div>
+            <button onclick="window.sendCharacter()" id="btn-join" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg shadow-lg transition transform active:scale-95 flex justify-center items-center gap-2">
+                <span>🚀</span> Send to DM
+            </button>
+        </div>
+
+        <div id="player-visual-container" class="hidden mb-6 animate-fade-in no-select">
+    <div class="relative group w-full">
+        <div class="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+        
+        <div class="relative w-full rounded-xl overflow-hidden shadow-2xl border border-white/10 bg-gray-900">
+            
+            <img id="player-visual-img" src="" alt="Live Map" class="relative w-full h-auto block pointer-events-none z-0">
+            
+            <div id="player-token-layer" class="absolute inset-0 w-full h-full z-10 overflow-hidden"></div>
+
+            <svg id="player-grid-layer" class="absolute inset-0 w-full h-full z-20 pointer-events-none"></svg>
+
+            <canvas id="player-fog-layer" class="absolute inset-0 w-full h-full z-30 pointer-events-none"></canvas>
+
+        </div>
+
+        <div class="absolute top-2 right-2 bg-black/60 backdrop-blur-md text-[8px] text-indigo-300 px-2 py-1 rounded uppercase tracking-tighter border border-white/10 z-50">Live Feed</div>
+    </div>
+</div>
+
+        <div class="pt-4">
+            <h3 class="text-xs font-bold text-gray-500 uppercase mb-3 text-center">Live Turn Order</h3>
+            <div id="combat-list" class="space-y-3 pb-10">
+                <div class="text-center text-gray-600 italic text-sm">Waiting for data...</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="data-form" class="tab-content hidden bg-gray-800/50 p-4 rounded-xl border border-indigo-500/30 mb-6 shadow-lg text-center">
+        <h3 class="text-sm font-bold text-indigo-300 mb-3 uppercase tracking-wider">Character Sheet Link</h3>
+        <a href="https://media.wizards.com/2016/dnd/downloads/5E_CharacterSheet_Fillable.pdf" target="_blank" class="w-full inline-flex justify-center items-center gap-3 bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition transform active:scale-95">Open PDF</a>
+        <div class="mt-8 border-t border-gray-700 pt-4">
+             <label class="block text-[10px] text-gray-400 uppercase font-bold">DM Session ID</label>
+             <div id="campaign-display" class="text-sm font-bold text-green-400 break-all">Loading...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB6lyGYJzk70t1OJvzBn5uyJN_k2_5NKYg",
+            authDomain: "aegisdmtoolkit.firebaseapp.com",
+            projectId: "aegisdmtoolkit",
+            storageBucket: "aegisdmtoolkit.firebasestorage.app",
+            messagingSenderId: "654767294266",
+            appId: "1:654767294266:web:fbee20be7d458fb7d6f203"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let dmId = null;
+        let combatants = [];
+        let currentTurnIndex = 0;
+
+        // --- INIT ---
+        window.addEventListener('DOMContentLoaded', async () => {
+            const status = document.getElementById('status');
+            const urlParams = new URLSearchParams(window.location.search);
+            dmId = urlParams.get('dm');
+
+            if (!dmId) {
+                status.innerText = "❌ No DM Link Detected.";
+                status.className = "text-red-500 font-bold";
+                return;
+            }
+
+            status.innerText = "✅ Connected";
+            status.className = "text-green-400 font-bold";
+
+            setupCombatantsListener();
+            setupTurnOrderListener();
+            setupUplinkListener(); 
+            setupTokenListener();
+            
+            // Load Campaign Name
+            try {
+                const docSnap = await getDoc(doc(db, `artifacts/default/sessions/${dmId}/singles/shared_notes`));
+                if (docSnap.exists() && docSnap.data().currentCampaign) {
+                    document.getElementById('campaign-display').innerText = docSnap.data().currentCampaign;
+                }
+            } catch(e) {}
+        });
+
+        // --- LISTENERS ---
+        function setupCombatantsListener() {
+            onSnapshot(collection(db, `artifacts/default/sessions/${dmId}/shared_combatants`), (snapshot) => {
+                combatants = [];
+                snapshot.forEach(doc => combatants.push({ id: doc.id, ...doc.data() }));
+                combatants.sort((a, b) => (b.init || 0) - (a.init || 0));
+                renderCombatList();
+            });
+        }
+
+        function setupTurnOrderListener() {
+            onSnapshot(doc(db, `artifacts/default/sessions/${dmId}/singles/shared_combat_state`), (d) => {
+                if(d.exists()) {
+                    currentTurnIndex = d.data().currentTurnIndex || 0;
+                    renderCombatList();
+                }
+            });
+        }
+
+        function renderCombatList() {
+            const list = document.getElementById('combat-list');
+            if(!list) return;
+            if (combatants.length === 0) {
+                list.innerHTML = '<div class="text-center text-gray-500 italic text-sm">Waiting for combat...</div>';
+                return;
+            }
+            list.innerHTML = '';
+            combatants.forEach((c, idx) => {
+                const isActive = (idx === currentTurnIndex);
+                const el = document.createElement('div');
+                el.className = `flex items-center justify-between p-3 rounded-lg border transition-all duration-300 ${isActive ? 'bg-indigo-900/40 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.3)] scale-[1.02]' : 'bg-gray-800/50 border-gray-700'}`;
+                el.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="flex flex-col items-center justify-center w-8"><span class="text-lg font-bold ${isActive ? 'text-indigo-300' : 'text-gray-500'}">${c.init || 0}</span></div>
+                        <div><div class="font-bold text-sm ${isActive ? 'text-white' : 'text-gray-300'}">${c.name}</div><div class="text-[10px] text-gray-500">${c.conditions && c.conditions.length > 0 ? c.conditions.join(', ') : 'Healthy'}</div></div>
+                    </div>
+                    ${isActive ? '<div class="text-[10px] bg-indigo-600 text-white px-2 py-1 rounded animate-pulse">ACTIVE</div>' : ''}
+                `;
+                list.appendChild(el);
+            });
+        }
+
+       
+       
+ 
+
+// ==========================================
+// 🟢 PLAYER SIDE: LOGIC UPDATE
+// ==========================================
+
+// 1. TOKEN LISTENER (Listens to DB -> Updates Fog)
+function setupTokenListener() {
+    // Ensure we have a DM ID to listen to
+    if (!dmId) return;
+    const tokenCol = collection(db, `artifacts/default/sessions/${dmId}/vtt_tokens`);
+
+    onSnapshot(tokenCol, (snapshot) => {
+        const layer = document.getElementById('player-token-layer');
+        if (!layer) return;
+        layer.innerHTML = ''; 
+
+        // 🔒 FIXED SIZE: Match the DM's fixed size
+        const fixedBaseSize = 50; 
+
+        snapshot.forEach((doc) => {
+            const t = doc.data();
+            const el = document.createElement('div');
+
+            // Store Sight Data for the Fog Engine
+            el.dataset.hasSight = t.hasSight || "false";
+            el.dataset.sightRange = t.sightRange || 6;
+            el.dataset.size = t.size || 1;
+
+            // 🟢 NEW CODE (Added centering classes)
+el.className = `absolute rounded-full border-2 shadow-lg flex items-center justify-center font-black text-[8px] md:text-[10px] select-none transition-all duration-200 ease-out z-40 bg-cover bg-center cursor-grab active:cursor-grabbing -translate-x-1/2 -translate-y-1/2`;
+            
+            // Apply Fixed Size
+            const finalSize = fixedBaseSize * (t.size || 1);
+            el.style.width = `${finalSize}px`;
+            el.style.height = `${finalSize}px`;
+
+            // Position
+            el.style.left = `${t.x}%`;
+            el.style.top = `${t.y}%`;
+            el.style.transform = "translate(-50%, -50%)";
+            el.id = 'token-' + doc.id;
+
+            // Visuals
+            if (t.image) {
+                el.style.backgroundImage = `url('${t.image}')`;
+                el.style.borderColor = "white";
+            } else {
+                el.style.backgroundColor = t.color || 'blue';
+                el.style.borderColor = "rgba(255,255,255,0.8)";
+                el.innerText = t.shortLabel || "??";
+                el.style.color = "white";
+            }
+            
+            // Enable Player Dragging
+            el.onmousedown = (e) => window.startPlayerDrag(e, doc.id);
+            el.ontouchstart = (e) => window.startPlayerDrag(e, doc.id);
+
+            layer.appendChild(el);
+        });
+
+        // 🟢 TRIGGER FOG REDRAW
+        // This is the key: When tokens update (like when you click 'Reveal'), redraw the fog.
+        
+    });
+}
+
+// 2. PLAYER FOG RENDERER (Cuts Holes)
+window.renderPlayerFog = function() {
+    const canvas = document.getElementById('player-fog-layer');
+    const container = document.getElementById('player-visual-container');
+    if (!canvas || !container) return;
+
+    const ctx = canvas.getContext('2d');
+    
+    // Sync Resolution
+    if (canvas.width !== container.offsetWidth || canvas.height !== container.offsetHeight) {
+        canvas.width = container.offsetWidth;
+        canvas.height = container.offsetHeight;
+    }
+
+    // A. Fill with Black (Reset)
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // B. Cut Holes (Vision)
+    ctx.globalCompositeOperation = 'destination-out';
+    const gridSize = 50; // Match Fixed Size
+
+    const tokens = document.querySelectorAll('#player-token-layer > div');
+    tokens.forEach(token => {
+        // Only cut holes if the token has sight turned on
+        if (token.dataset.hasSight === "true") {
+            const left = parseFloat(token.style.left) / 100 * canvas.width;
+            const top = parseFloat(token.style.top) / 100 * canvas.height;
+            const range = parseInt(token.dataset.sightRange) || 6;
+            
+            ctx.beginPath();
+            ctx.arc(left, top, gridSize * range, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+
+    // Reset Mode
+    ctx.globalCompositeOperation = 'source-over';
+};
+
+
+// ==========================================
+// 🟢 GRID RENDERER (Player Side - Responsive)
+// ==========================================
+window.renderPlayerGrid = function(settings) {
+    const svg = document.getElementById('player-grid-layer');
+    const container = document.getElementById('player-visual-container');
+    const img = document.getElementById('player-visual-img');
+
+    if (!svg || !container || !img) return;
+
+    // 1. Check Visibility
+    if (settings && settings.visible === false) {
+        svg.innerHTML = ''; 
+        return; 
+    }
+
+    // 🟢 2. WAIT FOR IMAGE LOAD
+    // If map hasn't loaded yet, the scale will be wrong (Infinity or 0). Wait and retry.
+    if (img.naturalWidth === 0 || container.offsetWidth === 0) {
+        console.log("Grid waiting for map layout...");
+        setTimeout(() => window.renderPlayerGrid(settings), 100);
+        return;
+    }
+
+    // 3. Calculate Player Scale
+    // This tells us how small the map is on the player's screen right now.
+    const playerScale = container.offsetWidth / img.naturalWidth;
+
+    // 4. Calculate Draw Size
+    // DB sends "Native Size" (e.g. 100). We multiply by scale (e.g. 0.5) to get 50px.
+    const nativeSize = settings?.size || 50; 
+    const drawSize = nativeSize * playerScale;
+
+    const color = settings?.color || "rgba(255, 255, 255, 0.2)";
+    const widthVal = settings?.width || 1;
+    
+    // 5. Draw
+    svg.innerHTML = ''; 
+    const w = container.offsetWidth;
+    const h = container.offsetHeight;
+    let html = '';
+
+    // Safety check to prevent browser crash
+    if (drawSize < 3 || !Number.isFinite(drawSize)) return;
+
+    for (let x = drawSize; x < w; x += drawSize) {
+        html += `<line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="${color}" stroke-width="${widthVal}" vector-effect="non-scaling-stroke" />`;
+    }
+    for (let y = drawSize; y < h; y += drawSize) {
+        html += `<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="${color}" stroke-width="${widthVal}" vector-effect="non-scaling-stroke" />`;
+    }
+    
+    svg.innerHTML = html;
+};
+
+// ==========================================
+// 🟢 GRID RENDERER (Smart Waiting)
+// ==========================================
+window.renderPlayerGrid = function(settings) {
+    const svg = document.getElementById('player-grid-layer');
+    const container = document.getElementById('player-visual-container');
+    const img = document.getElementById('player-visual-img');
+
+    // 1. Safety Checks
+    if (!svg || !container || !img) return;
+
+    // 2. Check Visibility
+    if (settings && settings.visible === false) {
+        svg.innerHTML = ''; 
+        return; 
+    }
+
+    // 🟢 3. CRITICAL FIX: WAIT FOR IMAGE
+    // If the image has no width (still loading), wait 100ms and try again.
+    if (img.naturalWidth === 0 || container.offsetWidth === 0) {
+        // console.log("⏳ Grid waiting for map image...");
+        setTimeout(() => window.renderPlayerGrid(settings), 100);
+        return;
+    }
+
+    // 4. Calculate Scale
+    // How much is the map shrunk on this screen?
+    // Example: Map is 2000px, Screen is 500px -> Scale = 0.25
+    const playerScale = container.offsetWidth / img.naturalWidth;
+
+    // 5. Calculate Grid Size
+    // DB sends "Native Size" (e.g. 100). We multiply by scale (0.25) -> Draw 25px.
+    const nativeSize = settings?.size || 50; 
+    const drawSize = nativeSize * playerScale;
+
+    // Safety: Don't draw microscopic or broken grids
+    if (drawSize < 3 || !Number.isFinite(drawSize)) return;
+
+    // 6. Draw Grid
+    const color = settings?.color || "rgba(255, 255, 255, 0.2)";
+    const widthVal = settings?.width || 1;
+    
+    svg.innerHTML = ''; 
+    const w = container.offsetWidth;
+    const h = container.offsetHeight;
+    let html = '';
+
+    // Vertical Lines
+    for (let x = drawSize; x < w; x += drawSize) {
+        html += `<line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="${color}" stroke-width="${widthVal}" vector-effect="non-scaling-stroke" />`;
+    }
+    // Horizontal Lines
+    for (let y = drawSize; y < h; y += drawSize) {
+        html += `<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="${color}" stroke-width="${widthVal}" vector-effect="non-scaling-stroke" />`;
+    }
+    
+    svg.innerHTML = html;
+};
+
+// ==========================================
+// 🟢 4. UPLINK (Syncs Map, Grid & Fog)
+// ==========================================
+function setupUplinkListener() {
+    onSnapshot(doc(db, `artifacts/default/sessions/${dmId}/singles/shared_uplink`), (docSnap) => {
+        const data = docSnap.data();
+        const container = document.getElementById('player-visual-container');
+        const mapImg = document.getElementById('player-visual-img');
+
+        if (docSnap.exists() && data.activeImage) {
+            container.classList.remove('hidden');
+            
+            // Check if map changed
+            if (mapImg.src !== data.activeImage) {
+                mapImg.src = data.activeImage;
+                // New Map: Wait for load, then apply visuals
+                mapImg.onload = () => {
+                    setTimeout(() => applyVisualUpdates(data), 100);
+                };
+            } else {
+                // Same Map: Apply visuals immediately (Live Sync)
+                applyVisualUpdates(data);
+            }
+        } else {
+            container.classList.add('hidden');
+        }
+    });
+}
+
+
+// 🟢 HELPER: Handles Grid & Fog updates in one place
+function applyVisualUpdates(data) {
+    // 1. Sync Grid
+    if (window.renderPlayerGrid) {
+        window.renderPlayerGrid(data.gridSettings || {});
+    }
+
+    // 2. Sync Fog (Image-based)
+    // 🟢 FIX: Check for 'fogData' (which is what your DM code sends)
+    const incomingFog = data.fogData || data.fogImage; 
+    
+    if (incomingFog) {
+        if (window.setupPlayerFog) {
+            window.setupPlayerFog(incomingFog);
+        }
+    } else {
+        // Fallback: Use old auto-fog if no manual paint data exists
+        if(window.renderPlayerFog) window.renderPlayerFog();
+    }
+}
+
+// 🟢 PLAYER DRAG LOGIC (Preserved)
+let pDraggedId = null;
+
+window.startPlayerDrag = (e, id) => {
+    e.preventDefault(); e.stopPropagation();
+    pDraggedId = id;
+    document.addEventListener('mousemove', window.onPlayerTokenMove);
+    document.addEventListener('mouseup', window.onPlayerTokenDrop);
+    document.addEventListener('touchmove', window.onPlayerTokenMove, { passive: false });
+    document.addEventListener('touchend', window.onPlayerTokenDrop);
+};
+
+        window.onPlayerTokenMove = (e) => {
+            if (!pDraggedId) return;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            const container = document.getElementById('player-visual-container').querySelector('.relative'); 
+            const rect = container.getBoundingClientRect();
+
+            let x = ((clientX - rect.left) / rect.width) * 100;
+            let y = ((clientY - rect.top) / rect.height) * 100;
+
+            const el = document.getElementById('token-' + pDraggedId);
+            if (el) {
+                el.style.transition = 'none'; 
+                el.style.left = `${x}%`;
+                el.style.top = `${y}%`;
+            }
+        };
+
+        window.onPlayerTokenDrop = async (e) => {
+            if (!pDraggedId) return;
+            const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+            const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+            
+            const container = document.getElementById('player-visual-container').querySelector('.relative');
+            const rect = container.getBoundingClientRect();
+
+            let x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+            let y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
+
+            const el = document.getElementById('token-' + pDraggedId);
+            if(el) el.style.transition = 'all 0.2s ease-out';
+
+            try {
+                const tokenRef = doc(db, `artifacts/default/sessions/${dmId}/vtt_tokens`, pDraggedId);
+                await updateDoc(tokenRef, { x: x, y: y });
+            } catch(err) { console.error("Move failed:", err); }
+
+            pDraggedId = null;
+            document.removeEventListener('mousemove', window.onPlayerTokenMove);
+            document.removeEventListener('mouseup', window.onPlayerTokenDrop);
+            document.removeEventListener('touchmove', window.onPlayerTokenMove);
+            document.removeEventListener('touchend', window.onPlayerTokenDrop);
+        };
+
+        // --- UTILS ---
+        window.showTab = (tabId) => {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(tabId + '-form').classList.remove('hidden');
+            document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-btn-' + tabId).classList.add('active');
+        };
+
+        window.sendCharacter = async () => {
+            const name = document.getElementById('p-name').value;
+            const init = parseInt(document.getElementById('p-init').value) || 0;
+            const ac = parseInt(document.getElementById('p-ac').value) || 10;
+            const hp = parseInt(document.getElementById('p-hp').value) || 10;
+            const btn = document.getElementById('btn-join');
+
+            if(!name) return alert("Please enter a character name.");
+            btn.innerText = "Sending...";
+            
+            try {
+                // STEP 1: Add to Combat List
+                await setDoc(doc(collection(db, `artifacts/default/sessions/${dmId}/shared_combatants`)), {
+                    name: name,
+                    init: init,
+                    ac: ac,
+                    currentHp: hp,  
+                    maxHp: hp,     
+                    type: 'player',
+                    conditions: []
+                });
+
+                // STEP 2: Add Token to Map
+                try {
+                    const tokenRef = doc(collection(db, `artifacts/default/sessions/${dmId}/vtt_tokens`));
+                    await setDoc(tokenRef, {
+                        id: tokenRef.id, 
+                        label: name, 
+                        shortLabel: name.substring(0,2).toUpperCase(), 
+                        color: 'green', 
+                        x: 50, y: 50
+                    });
+                } catch (tokenErr) {
+                    console.warn("Token creation failed:", tokenErr);
+                }
+
+                btn.innerText = "✅ Joined!";
+                setTimeout(() => btn.innerText = "🚀 Send Again", 3000);
+            } catch(e) { 
+                console.error("Critical Error:", e); 
+                btn.innerText = "❌ Error"; 
+                alert("Failed to join. Check console for details.");
+            }
+        };
+
+        // 🟢 PLAYER FOG RENDERER
+// Call this function whenever the database sends new 'fogData'
+window.setupPlayerFog = function(fogData) {
+    const canvas = document.getElementById('player-fog-layer');
+    const mapImg = document.getElementById('player-visual-img');
+    
+    if (!canvas || !mapImg) return;
+
+    const ctx = canvas.getContext('2d');
+
+    // Helper to paint the fog
+    const paint = () => {
+        // 1. Resize Canvas to match the Map's real resolution
+        // This ensures the fog lines up perfectly with the map features
+        canvas.width = mapImg.naturalWidth || 1920;
+        canvas.height = mapImg.naturalHeight || 1080;
+
+        // 2. Clear old fog
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 3. Draw new fog (if it exists)
+        if (fogData) {
+            const img = new Image();
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            };
+            img.src = fogData;
+        }
+    };
+
+    // Safety: If map isn't loaded yet, wait for it
+    if (mapImg.complete && mapImg.naturalWidth > 0) {
+        paint();
+    } else {
+        mapImg.onload = paint;
+    }
+};
+
+window.renderFog = () => {
+    const canvas = document.getElementById('fow-canvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    
+    // Sync Resolution
+    if (canvas.width !== canvas.offsetWidth || canvas.height !== canvas.offsetHeight) {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+    }
+
+    // A. Fill Black
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // B. Cut Holes (Vision)
+    ctx.globalCompositeOperation = 'destination-out';
+    
+    // Get Grid Size (Default to 50 if missing)
+    const input = document.getElementById('grid-size-input');
+    const gridSize = input ? (parseInt(input.value) || 50) : 50;
+
+    const tokens = document.querySelectorAll('.token');
+    
+    tokens.forEach(token => {
+        // Only render if it has sight
+        if (token.dataset.hasSight === "true") {
+            
+            // 🟢 SAFETY CHECK: Ensure coordinates exist
+            const leftVal = parseFloat(token.style.left);
+            const topVal = parseFloat(token.style.top);
+
+            // If coordinates are missing/broken, SKIP this token (Prevents crash)
+            if (isNaN(leftVal) || isNaN(topVal)) return;
+
+            const left = (leftVal / 100) * canvas.width;
+            const top = (topVal / 100) * canvas.height;
+            const range = parseInt(token.dataset.sightRange) || 6;
+            
+            ctx.beginPath();
+            ctx.arc(left, top, gridSize * range, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+
+    ctx.globalCompositeOperation = 'source-over';
+};
+
+
+    </script>
+</body>
+</html>
