@@ -10117,12 +10117,11 @@ window.closeTokenModal = () => {
     document.getElementById('new-token-file').value = "";
 };
 
-// 🟢 UPDATED: Saves Vision Status & Size
 window.confirmCreateToken = async () => {
     const nameInput = document.getElementById('new-token-name');
     const fileInput = document.getElementById('new-token-file');
-    const sizeInput = document.getElementById('new-token-size'); 
-    const visionInput = document.getElementById('new-token-vision'); // 🟢 Get Checkbox
+    const sizeInput = document.getElementById('new-token-size');
+    const visionInput = document.getElementById('new-token-vision'); // 🟢 GET CHECKBOX
     
     const sizeMultiplier = parseFloat(sizeInput ? sizeInput.value : 1) || 1;
     const btn = document.getElementById('btn-create-token');
@@ -10172,7 +10171,7 @@ window.confirmCreateToken = async () => {
     }
 };
 
-// 🟢 UPDATED: Attaches 'hasSight' data and enables Dragging
+
 window.setupTokenListener = () => {
     if (!window.userId) return;
     const tokenLayer = document.getElementById('vtt-token-layer');
@@ -10219,7 +10218,6 @@ window.setupTokenListener = () => {
             }
 
             // 🟢 3. ATTACH EVENTS (Fixes the "Can't Drag" issue)
-            // Note: We use window.startTokenDrag (matches your existing drag function name)
             el.onmousedown = (e) => window.startTokenDrag(e, docSnapshot.id);
             el.ontouchstart = (e) => window.startTokenDrag(e, docSnapshot.id);
             el.oncontextmenu = (e) => window.handleTokenContextMenu(e, docSnapshot.id);
@@ -11847,48 +11845,63 @@ window.revealTokenVision = async () => {
     const tokens = document.querySelectorAll('#vtt-token-layer > div');
     if(tokens.length === 0) return;
 
-    // Scaling Calculation
+    // 1. Get Screen Dimensions
     const rect = canvas.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
 
-    // Cut Holes
+    // 2. Clear Fog (Cut Holes)
     ctx.globalCompositeOperation = 'destination-out';
 
     tokens.forEach(token => {
-        // 🟢 CRITICAL CHECK: If token has no sight, SKIP IT!
+        // Check Toggle
         if (token.dataset.hasSight !== "true") return;
 
         const tokenRect = token.getBoundingClientRect();
         
-        // Calculate Center
+        // 3. Calculate Center in Canvas Coordinates
+        // We map the "Screen Pixel" center to "Canvas Pixel" center
         const screenX = tokenRect.left - rect.left + (tokenRect.width / 2);
         const screenY = tokenRect.top - rect.top + (tokenRect.height / 2);
-        const x = screenX * scaleX;
-        const y = screenY * scaleY;
+        
+        const canvasX = screenX * (canvas.width / rect.width);
+        const canvasY = screenY * (canvas.height / rect.height);
 
-        // Calculate Radius (3 squares = ~150px)
+        // 4. Calculate Radii to ensure perfect Screen Circle
+        // We want a vision radius of ~3 grid squares (approx 150 screen pixels)
+        // You can adjust 'targetScreenRadius' to make the circle bigger/smaller
         const gridSizeInput = document.getElementById('grid-size-input');
-        const gridSizeVal = gridSizeInput ? (parseInt(gridSizeInput.value) || 50) : 50;
-        const radius = (gridSizeVal * 3) * scaleX; 
+        const gridVal = parseInt(gridSizeInput ? gridSizeInput.value : 50) || 50;
+        
+        const targetScreenRadius = gridVal * 3; // e.g. 150px on screen
 
-        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(radius)) return;
+        // Convert that single screen distance into X and Y canvas distances
+        const radiusX = targetScreenRadius * (canvas.width / rect.width);
+        const radiusY = targetScreenRadius * (canvas.height / rect.height);
 
-        // Draw Soft Gradient Hole
-        const gradient = ctx.createRadialGradient(x, y, radius * 0.4, x, y, radius);
+        if (!Number.isFinite(canvasX) || !Number.isFinite(canvasY)) return;
+
+        // 5. Draw Ellipse (To appear as Circle on Screen)
+        // We use a transform so the radial gradient stretches with the oval
+        ctx.save();
+        ctx.translate(canvasX, canvasY);
+        ctx.scale(1, radiusY / radiusX); // Squash/Stretch the context
+
+        // Draw the "Circle" in this distorted space
+        // Note: We use radiusX for both because the Y-scale handles the shape
+        const gradient = ctx.createRadialGradient(0, 0, radiusX * 0.4, 0, 0, radiusX);
         gradient.addColorStop(0, 'rgba(0,0,0,1)'); 
         gradient.addColorStop(1, 'rgba(0,0,0,0)'); 
 
         ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.arc(0, 0, radiusX, 0, Math.PI * 2);
         ctx.fill();
+        
+        ctx.restore(); 
     });
 
     ctx.globalCompositeOperation = 'source-over';
 
-    // Broadcast change to players
     if(window.fog && window.fog.broadcast) {
         window.fog.broadcast();
     }
@@ -12033,126 +12046,58 @@ function getIntersection(ray, segment) {
 }
 
 
-// 🟢 PRO FEATURE: Auto-Reveal Vision
 window.revealTokenVision = async () => {
-    
-
     const canvas = document.getElementById('fow-canvas');
     if(!canvas) return;
     const ctx = canvas.getContext('2d');
+
     const tokens = document.querySelectorAll('#vtt-token-layer > div');
-    
-    // If no tokens, just exit (don't error)
-    if(tokens.length === 0) return; 
+    if(tokens.length === 0) return;
 
+    // Scaling Calculation
     const rect = canvas.getBoundingClientRect();
-
-    // 🟢 SAFETY CHECK: PREVENT CRASH
-    // If map is hidden or has 0 size, STOP immediately.
-    // This fixes the "non-finite" error.
-    if (rect.width === 0 || rect.height === 0) {
-        console.warn("Vision skipped: Map has no size.");
-        return;
-    }
-
+    if (rect.width === 0 || rect.height === 0) return;
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
 
-    // 🟢 SECOND SAFETY CHECK:
-    // Ensure scale is a real number (not Infinity)
-    if (!Number.isFinite(scaleX) || !Number.isFinite(scaleY)) return;
-
+    // Cut Holes
     ctx.globalCompositeOperation = 'destination-out';
 
     tokens.forEach(token => {
-        const tRect = token.getBoundingClientRect();
+        // 🟢 CRITICAL CHECK: If token has no sight, SKIP IT!
+        if (token.dataset.hasSight !== "true") return;
+
+        const tokenRect = token.getBoundingClientRect();
         
-        // Calculate center relative to canvas
-        const cx = (tRect.left - rect.left + tRect.width/2) * scaleX;
-        const cy = (tRect.top - rect.top + tRect.height/2) * scaleY;
-        
-        const gridSize = parseInt(document.getElementById('grid-size-input').value) || 50;
-        const radius = (gridSize * 6) * scaleX; 
+        // Calculate Center
+        const screenX = tokenRect.left - rect.left + (tokenRect.width / 2);
+        const screenY = tokenRect.top - rect.top + (tokenRect.height / 2);
+        const x = screenX * scaleX;
+        const y = screenY * scaleY;
 
-        // 🟢 THIRD SAFETY CHECK:
-        // Ensure coordinates are finite before drawing
-        if (!Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(radius)) return;
+        // Calculate Radius (3 squares = ~150px)
+        const gridSizeInput = document.getElementById('grid-size-input');
+        const gridSizeVal = gridSizeInput ? (parseInt(gridSizeInput.value) || 50) : 50;
+        const radius = (gridSizeVal * 3) * scaleX; 
 
-        if (!window.walls || window.walls.length === 0) {
-            const grad = ctx.createRadialGradient(cx, cy, radius * 0.2, cx, cy, radius);
-            grad.addColorStop(0, 'rgba(0,0,0,1)');
-            grad.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(cx, cy, radius, 0, Math.PI*2);
-            ctx.fill();
-            return;
-        }
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(radius)) return;
 
-        // Raycasting Logic
-        let points = [];
-        const rayCount = 120; 
-        
-        for(let i=0; i<rayCount; i++) {
-            const angle = (i / rayCount) * Math.PI * 2;
-            const dx = Math.cos(angle);
-            const dy = Math.sin(angle);
-            const ray = { x: cx, y: cy, dx: dx, dy: dy };
-            let closest = null;
-            let minDist = Infinity;
-            
-            const boundaries = [
-                {x1:0, y1:0, x2:canvas.width, y2:0},
-                {x1:canvas.width, y1:0, x2:canvas.width, y2:canvas.height},
-                {x1:canvas.width, y1:canvas.height, x2:0, y2:canvas.height},
-                {x1:0, y1:canvas.height, x2:0, y2:0}
-            ];
-            const scaledWalls = window.walls.map(w => ({
-                x1: w.x1 * scaleX, y1: w.y1 * scaleY,
-                x2: w.x2 * scaleX, y2: w.y2 * scaleY
-            }));
+        // Draw Soft Gradient Hole
+        const gradient = ctx.createRadialGradient(x, y, radius * 0.4, x, y, radius);
+        gradient.addColorStop(0, 'rgba(0,0,0,1)'); 
+        gradient.addColorStop(1, 'rgba(0,0,0,0)'); 
 
-            [...scaledWalls, ...boundaries].forEach(wall => {
-                const hit = getIntersection(ray, wall);
-                if(hit) {
-                    const dist = Math.sqrt((hit.x-cx)**2 + (hit.y-cy)**2);
-                    if(dist < minDist) {
-                        minDist = dist;
-                        closest = hit;
-                    }
-                }
-            });
-
-            if (closest && minDist <= radius) {
-                points.push(closest);
-            } else {
-                points.push({ x: cx + dx*radius, y: cy + dy*radius });
-            }
-        }
-
-        ctx.save();
+        ctx.fillStyle = gradient;
         ctx.beginPath();
-        if(points.length > 0) {
-            ctx.moveTo(points[0].x, points[0].y);
-            points.forEach(p => ctx.lineTo(p.x, p.y));
-        }
-        ctx.closePath();
-        ctx.clip(); 
-
-        const grad = ctx.createRadialGradient(cx, cy, radius * 0.2, cx, cy, radius);
-        grad.addColorStop(0, 'rgba(0,0,0,1)');
-        grad.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(cx-radius, cy-radius, radius*2, radius*2); 
-        ctx.restore();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
     });
 
     ctx.globalCompositeOperation = 'source-over';
-    if(window.fog && window.fog.broadcast) window.fog.broadcast();
-    
-    // Only show toast if triggered by user click (not auto-load)
-    if (window.event && window.event.type === 'click') {
-        window.showToast("Vision Updated", "success");
+
+    // Broadcast change to players
+    if(window.fog && window.fog.broadcast) {
+        window.fog.broadcast();
     }
 };
 
@@ -13045,7 +12990,7 @@ setTimeout(() => {
 
         <div class="flex items-center gap-2 mb-4 bg-gray-800 p-2 rounded border border-gray-600">
     <input type="checkbox" id="new-token-vision" class="w-5 h-5 accent-indigo-500 cursor-pointer">
-    <label for="new-token-vision" class="text-xs text-gray-300 cursor-pointer select-none">
+    <label for="new-token-vision" class="text-xs text-gray-300 cursor-pointer select-none font-bold">
         👁️ Enable Vision (Clears Fog)
     </label>
 </div>
