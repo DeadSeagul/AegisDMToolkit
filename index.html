@@ -12581,6 +12581,53 @@ window.changeTokenVisionRange = async () => {
     document.getElementById('token-context-menu').classList.add('hidden');
 };
 
+// 🟢 RENDER WALLS (Visuals for DM)
+window.renderWalls = () => {
+    const svg = document.getElementById('wall-layer');
+    const container = document.getElementById('visual-container'); // or 'map-container' depending on your ID
+    
+    if (!svg || !container) return;
+
+    // 1. Sync Resolution
+    // Walls are saved as %, so we don't strictly need to resize the SVG canvas if it's 100% width/height,
+    // but it's good practice to ensure the viewbox matches if you use one.
+    
+    // 2. Clear old lines
+    svg.innerHTML = '';
+
+    // 3. Draw new lines
+    const walls = window.walls || [];
+    
+    walls.forEach((w, index) => {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        
+        // Coordinates are already in % (0-100)
+        line.setAttribute("x1", `${w.x1}%`);
+        line.setAttribute("y1", `${w.y1}%`);
+        line.setAttribute("x2", `${w.x2}%`);
+        line.setAttribute("y2", `${w.y2}%`);
+        
+        // Style: Bright Red, Thick
+        line.setAttribute("stroke", "#ef4444"); // Tailwind red-500
+        line.setAttribute("stroke-width", "4");
+        line.setAttribute("stroke-linecap", "round");
+        line.setAttribute("class", "cursor-pointer hover:stroke-white transition-colors");
+        
+        // Right-click to delete logic
+        line.oncontextmenu = (e) => {
+            e.preventDefault();
+            if(confirm("Delete this wall?")) {
+                window.walls.splice(index, 1);
+                window.saveWalls(); // Ensure this saves to Firebase
+                window.renderWalls();
+                window.revealTokenVision(); // Update fog immediately
+            }
+        };
+
+        svg.appendChild(line);
+    });
+};
+
 // 🟢 LINK GRID TO VISION
 // This ensures that when you change the grid size, the 30ft vision 
 // instantly scales up or down to match the new square size.
