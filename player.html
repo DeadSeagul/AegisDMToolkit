@@ -399,14 +399,18 @@ window.renderPlayerGrid = function(settings) {
     svg.innerHTML = html;
 };
 
-// ==========================================
-// 🟢 4. UPLINK (Syncs Map, Grid & Fog)
-// ==========================================
+// 🟢 UPLINK: Syncs Map, Grid, Fog & Snap Settings
 function setupUplinkListener() {
     onSnapshot(doc(db, `artifacts/default/sessions/${dmId}/singles/shared_uplink`), (docSnap) => {
         const data = docSnap.data();
         const container = document.getElementById('player-visual-container');
         const mapImg = document.getElementById('player-visual-img');
+
+        if (data) {
+            // 1. CAPTURE SETTINGS GLOBALLY
+            window.snapEnabled = data.snapEnabled || false;
+            window.gridSettings = data.gridSettings || { size: 50 }; // Default to 50 if missing
+        }
 
         if (docSnap.exists() && data.activeImage) {
             container.classList.remove('hidden');
@@ -462,24 +466,52 @@ window.startPlayerDrag = (e, id) => {
     document.addEventListener('touchend', window.onPlayerTokenDrop);
 };
 
-        window.onPlayerTokenMove = (e) => {
-            if (!pDraggedId) return;
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            
-            const container = document.getElementById('player-visual-container').querySelector('.relative'); 
-            const rect = container.getBoundingClientRect();
+        // 🟢 SMART MOVE LOGIC (Snaps to DM's Grid)
+window.onPlayerTokenMove = (e) => {
+    if (!pDraggedId) return;
+    if(e.cancelable) e.preventDefault(); 
 
-            let x = ((clientX - rect.left) / rect.width) * 100;
-            let y = ((clientY - rect.top) / rect.height) * 100;
+    // 1. Get Container & Image Info
+    const container = document.getElementById('player-visual-container').querySelector('.relative'); 
+    const mapImg = document.getElementById('player-visual-img');
+    if (!container || !mapImg) return;
 
-            const el = document.getElementById('token-' + pDraggedId);
-            if (el) {
-                el.style.transition = 'none'; 
-                el.style.left = `${x}%`;
-                el.style.top = `${y}%`;
-            }
-        };
+    const rect = container.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    // 2. Calculate Raw Percentage Position
+    let x = ((clientX - rect.left) / rect.width) * 100;
+    let y = ((clientY - rect.top) / rect.height) * 100;
+
+    // 🟢 3. SMART SNAP MATH
+    if (window.snapEnabled && window.gridSettings && mapImg.naturalWidth > 0) {
+        
+        // A. Get the DM's Grid Size (in Native Map Pixels)
+        const nativeGridSize = window.gridSettings.size || 50;
+
+        // B. Convert that Pixel Size into a Percentage of the total map width/height
+        // Example: If map is 2000px wide and grid is 100px, Snap = 5%
+        const snapX = (nativeGridSize / mapImg.naturalWidth) * 100;
+        const snapY = (nativeGridSize / mapImg.naturalHeight) * 100;
+
+        // C. Snap to the nearest grid line (Half-grid offset included for centering)
+        // Note: Tokens are anchored center, so we snap to center-points (0.5, 1.5, etc)
+        // or grid-intersections depending on preference. 
+        // This math snaps to the nearest "Box Center".
+        
+        x = Math.round((x - (snapX/2)) / snapX) * snapX + (snapX/2);
+        y = Math.round((y - (snapY/2)) / snapY) * snapY + (snapY/2);
+    }
+
+    // 4. Apply Movement
+    const el = document.getElementById('token-' + pDraggedId);
+    if (el) {
+        el.style.transition = 'none'; // Disable smooth transition for instant drag feel
+        el.style.left = `${x}%`;
+        el.style.top = `${y}%`;
+    }
+};
 
         window.onPlayerTokenDrop = async (e) => {
             if (!pDraggedId) return;
