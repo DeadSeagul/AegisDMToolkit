@@ -243,44 +243,65 @@ el.className = `absolute rounded-full border-2 shadow-lg flex items-center justi
     });
 }
 
-// 2. PLAYER FOG RENDERER (Cuts Holes)
+// 🟢 PLAYER RENDERER: Correct Size + Wall Blocking
 window.renderPlayerFog = function() {
     const canvas = document.getElementById('player-fog-layer');
     const container = document.getElementById('player-visual-container');
     if (!canvas || !container) return;
 
-    const ctx = canvas.getContext('2d');
-    
-    // Sync Resolution
-    if (canvas.width !== container.offsetWidth || canvas.height !== container.offsetHeight) {
+    if (canvas.width !== container.offsetWidth) {
         canvas.width = container.offsetWidth;
         canvas.height = container.offsetHeight;
     }
 
-    // A. Fill with Black (Reset)
+    const ctx = canvas.getContext('2d');
+    
+    // 1. Fill Black
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // B. Cut Holes (Vision)
+    // 2. Cut Holes
     ctx.globalCompositeOperation = 'destination-out';
-    const gridSize = 50; // Match Fixed Size
+    const gridSize = 50; // Players usually use fixed grid scale
+    const walls = window.walls || [];
 
-    const tokens = document.querySelectorAll('#player-token-layer > div');
-    tokens.forEach(token => {
-        // Only cut holes if the token has sight turned on
+    document.querySelectorAll('#player-token-layer > div').forEach(token => {
         if (token.dataset.hasSight === "true") {
             const left = parseFloat(token.style.left) / 100 * canvas.width;
             const top = parseFloat(token.style.top) / 100 * canvas.height;
-            const range = parseInt(token.dataset.sightRange) || 6;
             
+            // 🟢 FIX 1: SIZE MATH
+            // Check both dataset names just in case (sightRange vs visionRange)
+            const rangeRaw = token.dataset.sightRange || token.dataset.visionRange || "30";
+            const rangeFeet = parseFloat(rangeRaw);
+            
+            // (Feet / 5) * 50 = Correct Radius
+            const radius = (rangeFeet / 5) * gridSize; 
+
+            ctx.save();
+
+            // 🟢 FIX 2: WALL CLIPPING
+            if (walls.length > 0) {
+                const poly = window.computeSightPolygon(left, top, radius, walls, canvas.width, canvas.height);
+                ctx.beginPath();
+                if(poly.length > 0) {
+                    ctx.moveTo(poly[0].x, poly[0].y);
+                    for(let i=1; i<poly.length; i++) ctx.lineTo(poly[i].x, poly[i].y);
+                }
+                ctx.closePath();
+                ctx.clip();
+            }
+
+            // Draw Circle
             ctx.beginPath();
-            ctx.arc(left, top, gridSize * range, 0, Math.PI * 2);
+            ctx.arc(left, top, radius, 0, Math.PI * 2);
             ctx.fill();
+
+            ctx.restore();
         }
     });
 
-    // Reset Mode
     ctx.globalCompositeOperation = 'source-over';
 };
 
@@ -682,7 +703,62 @@ window.renderFog = () => {
 };
 
 
+// ==========================================
+// 👁️ RAYCASTING ENGINE (The Cookie Cutter)
+// ==========================================
+window.computeSightPolygon = (cx, cy, radius, walls, canvasWidth, canvasHeight) => {
+    // 1. Convert Wall Coordinates to Canvas Pixels
+    const points = [];
+    walls.forEach(w => {
+        points.push({ x: (w.x1 / 100) * canvasWidth, y: (w.y1 / 100) * canvasHeight });
+        points.push({ x: (w.x2 / 100) * canvasWidth, y: (w.y2 / 100) * canvasHeight });
+    });
 
+    // 2. Add Canvas Corners (To fill the room)
+    points.push({x:0, y:0}, {x:canvasWidth, y:0}, {x:canvasWidth, y:canvasHeight}, {x:0, y:canvasHeight});
+
+    // 3. Calculate Angles to all points
+    let uniqueAngles = [];
+    points.forEach(p => {
+        const angle = Math.atan2(p.y - cy, p.x - cx);
+        uniqueAngles.push(angle - 0.0001, angle, angle + 0.0001);
+    });
+
+    // 4. Cast Rays to create the "Room Shape"
+    let intersections = [];
+    uniqueAngles.forEach(angle => {
+        const dx = Math.cos(angle);
+        const dy = Math.sin(angle);
+        
+        // Raycast "Infinite" distance to find walls
+        let closestT = 10000; 
+        
+        walls.forEach(w => {
+            const wx1 = (w.x1 / 100) * canvasWidth;
+            const wy1 = (w.y1 / 100) * canvasHeight;
+            const wx2 = (w.x2 / 100) * canvasWidth;
+            const wy2 = (w.y2 / 100) * canvasHeight;
+
+            const denom = (dx * (wy1 - wy2)) - (dy * (wx1 - wx2));
+            if (denom === 0) return; 
+
+            const t = ((cx - wx1) * (wy1 - wy2) - (cy - wy1) * (wx1 - wx2)) / denom;
+            const u = ((cx - wx1) * dy - (cy - wy1) * dx) / denom;
+
+            if (t > 0 && t < closestT && u >= 0 && u <= 1) {
+                closestT = t;
+            }
+        });
+
+        intersections.push({
+            angle: angle,
+            x: cx + dx * closestT, 
+            y: cy + dy * closestT
+        });
+    });
+
+    return intersections.sort((a, b) => a.angle - b.angle);
+};
 
     </script>
 </body>
