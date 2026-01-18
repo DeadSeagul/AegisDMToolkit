@@ -586,7 +586,7 @@ canvas {
             <span>🏠</span> <span>Home Dashboard</span>
         </button>
 
-        <div class="mt-auto pt-4 border-t border-gray-800">
+       <div class="mt-auto pt-4 border-t border-gray-800">
     <button onclick="document.getElementById('pro-modal').classList.remove('hidden')" class="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-yellow-600 to-amber-500 p-3 text-center shadow-lg transition-transform hover:scale-105">
         <div class="relative z-10 flex items-center justify-center gap-2 font-black text-black uppercase tracking-widest text-xs">
             <span>👑</span> Upgrade to Pro
@@ -594,6 +594,7 @@ canvas {
         <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-1000 group-hover:translate-x-full"></div>
     </button>
 </div>
+
         
         <div class="flex items-center gap-1 group">
 
@@ -1041,7 +1042,7 @@ canvas {
 
     <svg id="wall-layer" class="absolute inset-0 w-full h-full z-[15] pointer-events-none"></svg>
 
-    <div id="vtt-token-layer" class="absolute inset-0 w-full h-full z-10 pointer-events-auto"></div>
+    <div id="vtt-token-layer" class="absolute inset-0 w-full h-full z-50 pointer-events-none"></div>
     
 
             
@@ -2999,77 +3000,71 @@ window.setupDMMapListener = () => {
 
 // --- 7. CORE NAVIGATION (Master Color Controller) ---
     window.switchTab = function(tabId) {
-        window.currentTab = tabId;
-        
-        // 1. Hide all tab content areas
-        document.querySelectorAll('.tab-content, .tab-section').forEach(el => el.classList.add('hidden'));
-        
-        // 2. Show the selected tab content
-        let target = document.getElementById(tabId); 
-        if (!target) target = document.getElementById('tab-' + tabId); // Finds 'tab-home'
-        if(target) target.classList.remove('hidden');
-        
-        // --- 3. SIDEBAR HIGHLIGHT LOGIC ---
-        
-        // Define the color themes for each tab
-        const tabThemes = {
-            'improv':     { text: 'text-indigo-200', bg: 'bg-indigo-600/20' },
-            'combat':     { text: 'text-red-200',    bg: 'bg-red-600/20' },
-            'statblocks': { text: 'text-yellow-200', bg: 'bg-yellow-600/20' },
-            'monsters':   { text: 'text-emerald-200',bg: 'bg-emerald-600/20' },
-            'loot':       { text: 'text-amber-200',  bg: 'bg-amber-600/20' },
-            'travel':     { text: 'text-green-200',  bg: 'bg-green-600/20' },
-            'soundboard': { text: 'text-pink-200',   bg: 'bg-pink-600/20' },
-            'gallery-tab':{ text: 'text-orange-200', bg: 'bg-orange-600/20' },
-            'notes':      { text: 'text-cyan-200',   bg: 'bg-cyan-600/20' },
-            'maps':       { text: 'text-teal-200',   bg: 'bg-teal-600/20' },
-            'homebrew':   { text: 'text-blue-200',   bg: 'bg-blue-600/20' },
-            'rules':      { text: 'text-purple-200', bg: 'bg-purple-600/20' },
-            'help':       { text: 'text-gray-200',   bg: 'bg-gray-600/20' }
-        };
-
-        // Helper to strip all possible active colors from a button
-        const removeAllColors = (btn) => {
-            Object.values(tabThemes).forEach(theme => {
-                btn.classList.remove(theme.text, theme.bg);
-            });
-            btn.classList.remove('border-l-4', 'border-cyan-500', 'bg-opacity-20');
-        };
-
-        // Iterate all drawer buttons to update their state
-        document.querySelectorAll('.drawer-btn').forEach(btn => {
-            // A. Clean up the button (Remove old active state)
-            removeAllColors(btn);
-            btn.classList.add('text-gray-400'); // Set to default inactive gray
-            
-            // B. Check if this is the active button
-            // We look at the onclick attribute to see if it links to the current tab
-            if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`'${tabId}'`)) { 
-                
-                // C. Apply the specific theme color
-                const theme = tabThemes[tabId] || { text: 'text-indigo-200', bg: 'bg-indigo-600/20' }; // Default fallback
-                
-                btn.classList.remove('text-gray-400');
-                btn.classList.add(theme.text, theme.bg, 'border-l-4', 'border-cyan-500');
-            }
-        });
-        
-        // 4. Highlight the HOME Button (Special Case)
-        const homeBtn = document.getElementById('nav-home');
-        if (homeBtn) {
-            if (tabId === 'home') {
-                homeBtn.classList.remove('border-gray-700', 'text-gray-400', 'hover:border-teal-400');
-                homeBtn.classList.add('border-teal-400', 'text-white', 'bg-gray-700');
-            } else {
-                homeBtn.classList.add('border-gray-700', 'text-gray-400', 'hover:border-teal-400');
-                homeBtn.classList.remove('border-teal-400', 'text-white', 'bg-gray-700');
-            }
-        }
-        
-        // 5. Special case: Sub-tabs and Lazy Loading
-        if (tabId === 'notes') window.switchSubTab(window.currentSubTab);
-        if (tabId === 'gallery-tab') setTimeout(window.loadArtistGallery, 100);
+    window.currentTab = tabId;
+    
+    // 1. Hide all tab content areas
+    document.querySelectorAll('.tab-content, .tab-section').forEach(el => el.classList.add('hidden'));
+    
+    // 2. Show the selected tab content
+    let target = document.getElementById(tabId); 
+    if (!target) target = document.getElementById('tab-' + tabId); 
+    if(target) target.classList.remove('hidden');
+    
+    // --- 3. SIDEBAR HIGHLIGHT LOGIC ---
+    const tabThemes = {
+        'improv':     { text: 'text-indigo-200', bg: 'bg-indigo-600/20' },
+        'combat':     { text: 'text-red-200',    bg: 'bg-red-600/20' },
+        'statblocks': { text: 'text-yellow-200', bg: 'bg-yellow-600/20' },
+        'monsters':   { text: 'text-emerald-200',bg: 'bg-emerald-600/20' },
+        'loot':       { text: 'text-amber-200',  bg: 'bg-amber-600/20' },
+        'travel':     { text: 'text-green-200',  bg: 'bg-green-600/20' },
+        'soundboard': { text: 'text-pink-200',   bg: 'bg-pink-600/20' },
+        'gallery-tab':{ text: 'text-orange-200', bg: 'bg-orange-600/20' },
+        'notes':      { text: 'text-cyan-200',   bg: 'bg-cyan-600/20' },
+        'maps':       { text: 'text-teal-200',   bg: 'bg-teal-600/20' },
+        'homebrew':   { text: 'text-blue-200',   bg: 'bg-blue-600/20' },
+        'rules':      { text: 'text-purple-200', bg: 'bg-purple-600/20' },
+        'help':       { text: 'text-gray-200',   bg: 'bg-gray-600/20' }
     };
+
+    const removeAllColors = (btn) => {
+        Object.values(tabThemes).forEach(theme => {
+            btn.classList.remove(theme.text, theme.bg);
+        });
+        btn.classList.remove('border-l-4', 'border-cyan-500', 'bg-opacity-20');
+    };
+
+    document.querySelectorAll('.drawer-btn').forEach(btn => {
+        removeAllColors(btn);
+        btn.classList.add('text-gray-400'); 
+        
+        if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`'${tabId}'`)) { 
+            const theme = tabThemes[tabId] || { text: 'text-indigo-200', bg: 'bg-indigo-600/20' }; 
+            
+            btn.classList.remove('text-gray-400');
+            btn.classList.add(theme.text, theme.bg, 'border-l-4', 'border-cyan-500');
+        }
+    });
+    
+    // 4. Highlight the HOME Button
+    const homeBtn = document.getElementById('nav-home');
+    if (homeBtn) {
+        if (tabId === 'home') {
+            homeBtn.classList.remove('border-gray-700', 'text-gray-400', 'hover:border-teal-400');
+            homeBtn.classList.add('border-teal-400', 'text-white', 'bg-gray-700');
+        } else {
+            homeBtn.classList.add('border-gray-700', 'text-gray-400', 'hover:border-teal-400');
+            homeBtn.classList.remove('border-teal-400', 'text-white', 'bg-gray-700');
+        }
+    }
+    
+    // 5. Special cases
+    if (tabId === 'notes') window.switchSubTab(window.currentSubTab);
+    if (tabId === 'gallery-tab') setTimeout(window.loadArtistGallery, 100);
+
+    // 🟢 6. CRITICAL UPDATE: Re-render pins to update the highlight
+    if(window.renderPinnedTabs) window.renderPinnedTabs();
+};
 
 window.switchSubTab = function(subTabId) {
     window.currentSubTab = subTabId;
@@ -9812,20 +9807,34 @@ window.renderPinnedTabs = () => {
         container.innerHTML = '';
         return;
     }
-
     bar.classList.remove('hidden');
-    container.innerHTML = window.pinnedTabs.map(pin => `
+
+    container.innerHTML = window.pinnedTabs.map(pin => {
+        // 🟢 CHECK ACTIVE STATE
+        const isActive = (pin.id === window.currentTab);
+        
+        // 🟢 STYLES
+        const baseStyle = "px-3 py-1 rounded-md text-[10px] font-bold transition-all flex items-center gap-1 shadow-md border";
+        
+        // Active: Cyan Glow
+        const activeStyle = "bg-cyan-600 border-cyan-400 text-white shadow-[0_0_10px_rgba(34,211,238,0.5)] transform scale-105";
+        
+        // Inactive: Gray
+        const inactiveStyle = "bg-gray-800/50 border-gray-700 text-gray-300 hover:border-cyan-500 hover:text-cyan-400";
+
+        const finalClass = `${baseStyle} ${isActive ? activeStyle : inactiveStyle}`;
+
+        return `
         <div class="relative group">
-            <button onclick="window.switchTab('${pin.id}')" 
-                    class="px-3 py-1 bg-gray-800/50 border border-gray-700 hover:border-cyan-500 rounded-md text-[10px] font-bold text-gray-300 hover:text-cyan-400 transition-all flex items-center gap-1 shadow-md">
+            <button onclick="window.switchTab('${pin.id}')" class="${finalClass}">
                 ${pin.name}
             </button>
-            <button onclick="window.togglePin('${pin.id}', '${pin.name}')" 
-                    class="absolute -top-1 -right-1 bg-red-600 text-white text-[8px] w-4 h-4 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg">
+            <button onclick="window.togglePin('${pin.id}', '${pin.name}')" class="absolute -top-1 -right-1 bg-red-600 text-white text-[8px] w-4 h-4 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg cursor-pointer">
                 ×
             </button>
         </div>
-    `).join('');
+        `;
+    }).join('');
 };
 
 window.clearAllPins = async () => {
@@ -10116,14 +10125,17 @@ window.closeTokenModal = () => {
     document.getElementById('new-token-file').value = "";
 };
 
-// 2. CREATE TOKEN (Uploads Image -> Saves to DB)
 window.confirmCreateToken = async () => {
     const nameInput = document.getElementById('new-token-name');
     const fileInput = document.getElementById('new-token-file');
-    
-    // 🟢 READ SIZE INPUT
     const sizeInput = document.getElementById('new-token-size');
-    const sizeMultiplier = parseFloat(sizeInput.value) || 1;
+    const visionInput = document.getElementById('new-token-vision'); 
+    const rangeInput = document.getElementById('new-token-vision-range'); 
+    
+    const sizeMultiplier = parseFloat(sizeInput ? sizeInput.value : 1) || 1;
+    
+    // 🟢 CHANGED: Default is now 30 feet (instead of 6 squares)
+    const visionRange = parseFloat(rangeInput ? rangeInput.value : 30) || 30; 
 
     const btn = document.getElementById('btn-create-token');
     const name = nameInput.value.trim() || "Unit";
@@ -10131,16 +10143,14 @@ window.confirmCreateToken = async () => {
 
     if (!window.auth.currentUser) return alert("You must be logged in.");
 
-    // UI Loading State
     const originalText = btn.innerText;
     btn.innerText = "Forging...";
     btn.disabled = true;
 
     try {
         let imageUrl = null;
-        let color = 'blue'; 
+        let color = 'blue';
 
-        // A. Upload Image (if provided)
         if (file) {
             const storageRef = window.sRef(window.storage, `sessions/${window.auth.currentUser.uid}/tokens/${Date.now()}_${file.name}`);
             await window.uploadBytes(storageRef, file);
@@ -10150,23 +10160,21 @@ window.confirmCreateToken = async () => {
             color = colors[Math.floor(Math.random() * colors.length)];
         }
 
-        // B. Save Token Data
         const tokenId = crypto.randomUUID();
-        await window.setDoc(window.doc(window.db, `artifacts/default/sessions/${window.auth.currentUser.uid}/vtt_tokens`, tokenId), {
+        await window.setDoc(window.doc(window.db, `artifacts/default/sessions/${window.userId}/vtt_tokens`, tokenId), {
             id: tokenId,
-            label: name, 
-            shortLabel: name.substring(0, 2).toUpperCase(), 
-            image: imageUrl, 
+            label: name,
+            shortLabel: name.substring(0, 2).toUpperCase(),
+            image: imageUrl,
             color: color,
-            x: 50, 
+            x: 50,
             y: 50,
-            
-            // 🟢 SAVE SIZE HERE
-            size: sizeMultiplier 
+            size: sizeMultiplier,
+            hasSight: visionInput ? visionInput.checked : false,
+            visionRange: visionRange // Saves "30", "60", etc.
         });
 
         window.closeTokenModal();
-
     } catch (error) {
         console.error("Token creation failed:", error);
         alert("Error creating token: " + error.message);
@@ -10176,73 +10184,177 @@ window.confirmCreateToken = async () => {
     }
 };
 
-// 3. RENDER TOKENS (Now supports Images!)
+
 window.setupTokenListener = () => {
-    if (!window.auth.currentUser) return;
-    const tokenCol = window.collection(window.db, `artifacts/default/sessions/${window.auth.currentUser.uid}/vtt_tokens`);
+    if (!window.userId) return;
+    const tokenLayer = document.getElementById('vtt-token-layer');
     
-    window.onSnapshot(tokenCol, (snapshot) => {
-        const layer = document.getElementById('vtt-token-layer');
-        if (!layer) return;
-        
-        // 1. Get Grid Size for scaling
-        const input = document.getElementById('grid-size-input');
-        const gridSize = input ? (parseInt(input.value) || 50) : 50;
+    window.onSnapshot(window.collection(window.db, `artifacts/default/sessions/${window.userId}/vtt_tokens`), (snapshot) => {
+        tokenLayer.innerHTML = ''; 
 
-        layer.innerHTML = ''; 
-        
-        snapshot.forEach((docSnapshot) => { 
+        snapshot.forEach((docSnapshot) => {
             const t = docSnapshot.data();
-            const dbId = docSnapshot.id; 
-
             const el = document.createElement('div');
             
-            // 🟢 2. UPDATED CLASSES: Removed fixed w-10 h-10, added transition
-            el.className = `token absolute border-[3px] rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] flex items-center justify-center font-black text-[10px] select-none cursor-move hover:z-50 transition-all z-40 pointer-events-auto bg-cover bg-center`;
+            el.dataset.hasSight = t.hasSight || false; 
+            el.dataset.size = t.size || 1;
             
-            // 🟢 3. APPLY SIZE (Grid Size * Multiplier)
-            const sizeMultiplier = t.size || 1;
-            el.dataset.size = sizeMultiplier; // Store for later updates
-            const fixedBaseSize = 50; // Tokens are always based on 50px
-const finalSize = fixedBaseSize * sizeMultiplier;
+            // 🟢 CHANGED: Default fallback is 30 (feet)
+            el.dataset.visionRange = t.visionRange || 30; 
+            
+            // ... (Rest of function is identical to before)
+            el.className = `token absolute border-[3px] rounded-full shadow-md flex items-center justify-center cursor-move select-none transition-transform duration-100 hover:z-50 active:z-50 group pointer-events-auto`;
+            el.id = `token-${docSnapshot.id}`;
+            
+            const fixedBaseSize = 50; 
+            const finalSize = fixedBaseSize * (t.size || 1);
             el.style.width = `${finalSize}px`;
             el.style.height = `${finalSize}px`;
-
-            // 🟢 4. APPLY POSITION (Keeps your saved X/Y)
             el.style.left = `${t.x}%`;
             el.style.top = `${t.y}%`;
-            el.style.transform = "translate(-50%, -50%)"; // Centers token on the coordinate
-            el.id = `token-${dbId}`; 
+            el.style.transform = "translate(-50%, -50%)"; 
+            
+            const colorMap = { red: 'border-red-500 bg-red-900', blue: 'border-blue-500 bg-blue-900', green: 'border-green-500 bg-green-900', purple: 'border-purple-500 bg-purple-900', orange: 'border-orange-500 bg-orange-900' };
+            const colorClass = colorMap[t.color] || colorMap['blue'];
 
-            // Image vs Color Logic
             if (t.image) {
+                el.classList.add(colorClass.split(' ')[0]);
+                el.style.backgroundColor = '#000';
                 el.style.backgroundImage = `url('${t.image}')`;
-                el.style.borderColor = "#ffffff"; 
-                el.innerText = ""; 
+                el.style.backgroundSize = 'cover';
             } else {
-                el.style.backgroundColor = t.color === 'red' ? '#ef4444' : t.color === 'blue' ? '#3b82f6' : t.color === 'green' ? '#22c55e' : t.color === 'purple' ? '#a855f7' : '#f97316';
-                el.style.borderColor = "rgba(255,255,255,0.8)";
-                el.innerText = t.shortLabel || "?";
+                el.className += ` ${colorClass}`;
+                el.innerText = t.shortLabel;
                 el.style.color = "white";
-                el.style.textShadow = "0px 1px 2px black";
+                el.style.fontWeight = "bold";
+                el.style.fontSize = `${10 * (t.size||1)}px`;
             }
 
-            // Tooltip
-            const tooltip = document.createElement('div');
-            tooltip.className = "absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-black/80 text-white text-[9px] font-bold px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity z-[60]";
-            tooltip.innerText = t.label;
-            el.classList.add("group");
-            el.appendChild(tooltip);
+            el.onmousedown = (e) => window.startTokenDrag(e, docSnapshot.id);
+            el.ontouchstart = (e) => window.startTokenDrag(e, docSnapshot.id);
+            el.oncontextmenu = (e) => window.handleTokenContextMenu(e, docSnapshot.id);
 
-            // Events
-            el.onmousedown = (e) => window.startTokenDrag(e, dbId);
-            
-            // 🟢 5. NEW CONTEXT MENU (Right-click)
-            el.oncontextmenu = (e) => window.handleTokenContextMenu(e, dbId);
-
-            layer.appendChild(el);
+            tokenLayer.appendChild(el);
         });
+
+        setTimeout(window.revealTokenVision, 100);
     });
+};
+
+// ==========================================
+// 🟢 TOKEN DRAG ENGINE (MISSING CODE)
+// ==========================================
+window.draggedTokenId = null;
+window.dragOffsetX = 0;
+window.dragOffsetY = 0;
+
+window.startDragToken = (e, tokenId) => {
+    if (window.vttSettings.isMeasuring) return; // Don't drag if measuring
+    if (window.isDrawingWall) return; // Don't drag if drawing walls
+    
+    // Prevent default browser dragging of images
+    e.preventDefault(); 
+    e.stopPropagation();
+
+    window.draggedTokenId = tokenId;
+    const token = document.getElementById(`token-${tokenId}`);
+    const rect = token.getBoundingClientRect();
+
+    // Calculate offset so token doesn't "snap" to center of mouse
+    // We handle both Mouse and Touch events
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    window.dragOffsetX = clientX - rect.left;
+    window.dragOffsetY = clientY - rect.top;
+
+    // Attach global listeners to document (so you can drag fast outside the token)
+    document.addEventListener('mousemove', window.dragToken);
+    document.addEventListener('mouseup', window.stopDragToken);
+    document.addEventListener('touchmove', window.dragToken, { passive: false });
+    document.addEventListener('touchend', window.stopDragToken);
+};
+
+window.dragToken = (e) => {
+    if (!window.draggedTokenId) return;
+    e.preventDefault(); // Stop scrolling on mobile
+
+    const container = document.getElementById('dm-map-container');
+    const containerRect = container.getBoundingClientRect();
+    
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    // 1. Calculate raw position relative to map container
+    let x = clientX - containerRect.left - window.dragOffsetX;
+    let y = clientY - containerRect.top - window.dragOffsetY;
+
+    // 2. Adjust for token center (since CSS uses center anchor)
+    // We want the mouse to hold the part of the token we clicked, 
+    // but the math below assumes we are setting the Top-Left.
+    // However, your CSS uses `transform: translate(-50%, -50%)`, so left/top are the CENTER.
+    
+    // Let's reverse the offset logic slightly for centered tokens:
+    // We want to calculate the new CENTER percentage.
+    
+    const tokenEl = document.getElementById(`token-${window.draggedTokenId}`);
+    const width = tokenEl.offsetWidth;
+    const height = tokenEl.offsetHeight;
+
+    // Add half-width to get the center point from the top-left coordinate
+    let centerX = x + (width / 2);
+    let centerY = y + (height / 2);
+
+    // 3. Snap to Grid (If Enabled)
+    if (window.vttSettings && window.vttSettings.snapEnabled) {
+        const snapped = window.snapToGrid(centerX, centerY);
+        centerX = snapped.x;
+        centerY = snapped.y;
+    }
+
+    // 4. Convert to Percentages (for responsive resizing)
+    const xPercent = (centerX / containerRect.width) * 100;
+    const yPercent = (centerY / containerRect.height) * 100;
+
+    // 5. Update Visuals Instantly
+    tokenEl.style.left = `${xPercent}%`;
+    tokenEl.style.top = `${yPercent}%`;
+};
+
+window.stopDragToken = async () => {
+    if (!window.draggedTokenId) return;
+
+    const tokenId = window.draggedTokenId;
+    const tokenEl = document.getElementById(`token-${tokenId}`);
+
+    // Clean up listeners
+    document.removeEventListener('mousemove', window.dragToken);
+    document.removeEventListener('mouseup', window.stopDragToken);
+    document.removeEventListener('touchmove', window.dragToken);
+    document.removeEventListener('touchend', window.stopDragToken);
+
+    window.draggedTokenId = null;
+
+    // 6. SAVE TO DATABASE
+    // Read the final style values we set during drag
+    const finalX = parseFloat(tokenEl.style.left);
+    const finalY = parseFloat(tokenEl.style.top);
+
+    if (!window.userId) return;
+
+    try {
+        await window.updateDoc(window.doc(window.db, `artifacts/default/sessions/${window.userId}/vtt_tokens`, tokenId), {
+            x: finalX,
+            y: finalY
+        });
+        
+        // Update Vision if needed
+        if (tokenEl.dataset.hasSight === "true") {
+            window.revealTokenVision();
+        }
+    } catch (err) {
+        console.error("Token Save Error:", err);
+    }
 };
 
 // Dragging Logic
@@ -10685,10 +10797,7 @@ window.toggleNoteDesign = function() {
 
 // 💾 SAVE SCENE (Includes Walls)
 window.saveCurrentScene = async (sceneName) => {
-    if (!window.isProUser) {
-        if (window.event && window.event.type === 'click') window.openProMenu();
-        return; 
-    }
+    
     
     if (!window.userId) return window.showToast("Log in to save.", "error");
     if (!sceneName) sceneName = prompt("Name this tactical scene:");
@@ -10745,10 +10854,7 @@ window.saveCurrentScene = async (sceneName) => {
 // 🟢 PRO SCENE SELECTOR
 window.openSceneSelector = async () => {
 
-    if (!window.isProUser) {
-        window.showToast("🔒 This feature is for Pro users only.", "error");
-        return;
-    }
+    
 
     if (!window.userId) return window.showToast("Login required", "error");
 
@@ -11589,23 +11695,37 @@ window.vttSettings = {
 // 🟢 SEPARATE GRID LOGIC
 // ==========================================
 
-// 1. SNAP TOGGLE (Physics only)
-window.toggleGridSnap = () => {
-    if (!window.isProUser) {
-    if (window.event && window.event.isTrusted) window.openProMenu();
-    return; 
-}
+// 🟢 DM SIDE: Toggle Snap & Sync to Players
+window.toggleGridSnap = async () => {
+    // 1. Toggle Local State
+    window.vttSettings = window.vttSettings || {};
     window.vttSettings.snapEnabled = !window.vttSettings.snapEnabled;
+
+    // 2. Visual Feedback (Button Color)
     const btn = document.getElementById('btn-snap');
-    
-    if(window.vttSettings.snapEnabled) {
-        btn.classList.add('text-indigo-400', 'bg-white/10');
-        btn.classList.remove('text-gray-400');
-        window.showToast("Snap: ON", "success");
-    } else {
-        btn.classList.remove('text-indigo-400', 'bg-white/10');
-        btn.classList.add('text-gray-400');
-        window.showToast("Snap: OFF");
+    if (btn) {
+        if (window.vttSettings.snapEnabled) {
+            btn.classList.add('text-indigo-400', 'bg-indigo-900/50');
+            btn.classList.remove('text-gray-400');
+            window.showToast("🧲 Snap ON (Synced)");
+        } else {
+            btn.classList.remove('text-indigo-400', 'bg-indigo-900/50');
+            btn.classList.add('text-gray-400');
+            window.showToast("Snap OFF");
+        }
+    }
+
+    // 3. SYNC TO FIREBASE (The Important Part)
+    if (window.userId) {
+        try {
+            await window.setDoc(
+                window.doc(window.db, `artifacts/default/sessions/${window.userId}/singles/shared_uplink`), 
+                { snapEnabled: window.vttSettings.snapEnabled }, 
+                { merge: true }
+            );
+        } catch (err) {
+            console.error("Error syncing snap:", err);
+        }
     }
 };
 
@@ -11613,10 +11733,7 @@ window.toggleGridSnap = () => {
 window.isGridVisible = false;
 
 window.toggleGridVisibility = () => {
-    if (!window.isProUser) {
-    if (window.event && window.event.isTrusted) window.openProMenu();
-    return; 
-}
+    
     window.isGridVisible = !window.isGridVisible;
     const btn = document.getElementById('btn-grid-vis');
     
@@ -11633,10 +11750,7 @@ window.toggleGridVisibility = () => {
 
 // 🟢 UPDATED: Snap to CENTER of Grid Square
 window.snapToGrid = (x, y) => {
-    if (!window.isProUser) {
-    if (window.event && window.event.isTrusted) window.openProMenu();
-    return; 
-}
+    
     // 1. Check if snapping is actually enabled
     if (!window.vttSettings.snapEnabled) return { x, y };
 
@@ -11662,10 +11776,7 @@ window.snapToGrid = (x, y) => {
 
 // 2. MEASURE TOOL (RULER)
 window.activateRuler = () => {
-    if (!window.isProUser) {
-    if (window.event && window.event.isTrusted) window.openProMenu();
-    return; 
-}
+    
     window.vttSettings.isMeasuring = !window.vttSettings.isMeasuring;
     const btn = document.getElementById('btn-ruler');
     const viewport = document.getElementById('vtt-token-layer'); // Use token layer for clicks
@@ -11747,78 +11858,7 @@ function endMeasure() {
 }
 
 
-// 3. DYNAMIC LIGHTING LITE (Token Vision) - FIXED SCALING
-window.revealTokenVision = async () => {
-    
-    // 1. Get Fog Canvas & Context
-    const canvas = document.getElementById('fow-canvas');
-    if(!canvas) return;
-    const ctx = canvas.getContext('2d');
 
-    // 2. Get All Tokens
-    const tokens = document.querySelectorAll('#vtt-token-layer > div');
-    if(tokens.length === 0) return; // Don't show error toast, just exit silently
-
-    // 🟢 CRITICAL FIX: Calculate Scale (Internal Resolution vs Screen Size)
-    const rect = canvas.getBoundingClientRect();
-
-    // 🛑 SAFETY CHECK: Stop if canvas is hidden/zero-size (Prevents "non-finite" crash)
-    if (rect.width === 0 || rect.height === 0) {
-        console.warn("Skipping vision update: Canvas is hidden.");
-        return;
-    }
-
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-
-    // 3. Cut Holes
-    ctx.globalCompositeOperation = 'destination-out';
-    let revealedCount = 0;
-
-    tokens.forEach(token => {
-        const tokenRect = token.getBoundingClientRect();
-        
-        // A. Calculate Center Position in CSS Pixels (Screen math)
-        const screenX = tokenRect.left - rect.left + (tokenRect.width / 2);
-        const screenY = tokenRect.top - rect.top + (tokenRect.height / 2);
-
-        // B. Convert to Canvas Internal Pixels (Bitmap math)
-        const x = screenX * scaleX;
-        const y = screenY * scaleY;
-
-        // Vision Radius (Default ~150px on screen)
-        const gridSizeInput = document.getElementById('grid-size-input');
-        const gridSizeVal = gridSizeInput ? (parseInt(gridSizeInput.value) || 50) : 50;
-        const radius = (gridSizeVal * 3) * scaleX; 
-
-        // 🟢 PREVENT CRASH: Ensure calculated values are finite numbers
-        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(radius)) return;
-
-        // Draw Soft Gradient Hole
-        const gradient = ctx.createRadialGradient(x, y, radius * 0.4, x, y, radius);
-        gradient.addColorStop(0, 'rgba(0,0,0,1)'); // Solid cut in center
-        gradient.addColorStop(1, 'rgba(0,0,0,0)'); // Fade at edge
-        
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.fill();
-        revealedCount++;
-    });
-
-    // Reset drawing mode
-    ctx.globalCompositeOperation = 'source-over';
-
-    // 4. Save & Sync
-    if(window.fog && window.fog.broadcast) {
-        window.fog.broadcast(); 
-    }
-    
-    // Only show toast if we actually did something (reduces spam on drag)
-    if (revealedCount > 0 && window.draggedId === null) {
-        // window.showToast(`Vision Updated`, "success");
-    }
-};
 
 // ==========================================
 // 🟢 ADVANCED VISION SYSTEM (Walls & Raycasting)
@@ -11829,10 +11869,7 @@ window.isDrawingWall = false;
 
 // 1. WALL DRAWING TOOL
 window.toggleWallTool = () => {
-    if (!window.isProUser) {
-    if (window.event && window.event.isTrusted) window.openProMenu();
-    return; 
-}
+    
     window.isDrawingWall = !window.isDrawingWall;
     const btn = document.getElementById('btn-wall');
     const container = document.getElementById('dm-map-container');
@@ -11923,10 +11960,7 @@ window.saveActiveWalls = async () => {
 
 // 🟢 2. REPLACE YOUR EXISTING clearWalls WITH THIS (Now it actually saves the deletion)
 window.clearWalls = () => {
-    if (!window.isProUser) {
-        if (window.event && window.event.isTrusted) window.openProMenu();
-        return; 
-    }
+    
 
     if(confirm("Delete all walls?")) {
         window.walls = []; // Clear the array
@@ -11965,132 +11999,81 @@ function getIntersection(ray, segment) {
 }
 
 
-// 🟢 PRO FEATURE: Auto-Reveal Vision
 window.revealTokenVision = async () => {
-    // 🔒 Silent Lock
-    if (!window.isProUser) {
-        if (window.event && window.event.type === 'click') window.openProMenu();
-        return; 
-    }
-
     const canvas = document.getElementById('fow-canvas');
     if(!canvas) return;
     const ctx = canvas.getContext('2d');
+
     const tokens = document.querySelectorAll('#vtt-token-layer > div');
-    
-    // If no tokens, just exit (don't error)
-    if(tokens.length === 0) return; 
+    if(tokens.length === 0) return;
 
+    // 1. Screen Scaling
     const rect = canvas.getBoundingClientRect();
-
-    // 🟢 SAFETY CHECK: PREVENT CRASH
-    // If map is hidden or has 0 size, STOP immediately.
-    // This fixes the "non-finite" error.
-    if (rect.width === 0 || rect.height === 0) {
-        console.warn("Vision skipped: Map has no size.");
-        return;
-    }
-
+    if (rect.width === 0 || rect.height === 0) return;
+    
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
 
-    // 🟢 SECOND SAFETY CHECK:
-    // Ensure scale is a real number (not Infinity)
-    if (!Number.isFinite(scaleX) || !Number.isFinite(scaleY)) return;
-
+    // 2. Clear Fog
     ctx.globalCompositeOperation = 'destination-out';
 
     tokens.forEach(token => {
-        const tRect = token.getBoundingClientRect();
+        // Check Toggle
+        if (token.dataset.hasSight !== "true") return;
+
+        const tokenRect = token.getBoundingClientRect();
         
-        // Calculate center relative to canvas
-        const cx = (tRect.left - rect.left + tRect.width/2) * scaleX;
-        const cy = (tRect.top - rect.top + tRect.height/2) * scaleY;
+        // Calculate Center
+        const screenX = tokenRect.left - rect.left + (tokenRect.width / 2);
+        const screenY = tokenRect.top - rect.top + (tokenRect.height / 2);
         
-        const gridSize = parseInt(document.getElementById('grid-size-input').value) || 50;
-        const radius = (gridSize * 6) * scaleX; 
+        const cx = screenX * scaleX;
+        const cy = screenY * scaleY;
 
-        // 🟢 THIRD SAFETY CHECK:
-        // Ensure coordinates are finite before drawing
-        if (!Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(radius)) return;
-
-        if (!window.walls || window.walls.length === 0) {
-            const grad = ctx.createRadialGradient(cx, cy, radius * 0.2, cx, cy, radius);
-            grad.addColorStop(0, 'rgba(0,0,0,1)');
-            grad.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(cx, cy, radius, 0, Math.PI*2);
-            ctx.fill();
-            return;
-        }
-
-        // Raycasting Logic
-        let points = [];
-        const rayCount = 120; 
+        // 🟢 THE LINKED MATH
+        // 1. Get Range in Feet (Default 30)
+        const rangeFeet = parseFloat(token.dataset.visionRange) || 30;
         
-        for(let i=0; i<rayCount; i++) {
-            const angle = (i / rayCount) * Math.PI * 2;
-            const dx = Math.cos(angle);
-            const dy = Math.sin(angle);
-            const ray = { x: cx, y: cy, dx: dx, dy: dy };
-            let closest = null;
-            let minDist = Infinity;
-            
-            const boundaries = [
-                {x1:0, y1:0, x2:canvas.width, y2:0},
-                {x1:canvas.width, y1:0, x2:canvas.width, y2:canvas.height},
-                {x1:canvas.width, y1:canvas.height, x2:0, y2:canvas.height},
-                {x1:0, y1:canvas.height, x2:0, y2:0}
-            ];
-            const scaledWalls = window.walls.map(w => ({
-                x1: w.x1 * scaleX, y1: w.y1 * scaleY,
-                x2: w.x2 * scaleX, y2: w.y2 * scaleY
-            }));
+        // 2. Convert to Squares (Standard D&D: 5ft = 1 Square)
+        const squares = rangeFeet / 5; 
 
-            [...scaledWalls, ...boundaries].forEach(wall => {
-                const hit = getIntersection(ray, wall);
-                if(hit) {
-                    const dist = Math.sqrt((hit.x-cx)**2 + (hit.y-cy)**2);
-                    if(dist < minDist) {
-                        minDist = dist;
-                        closest = hit;
-                    }
-                }
-            });
+        // 3. Get CURRENT Grid Size (The "Link")
+        const gridSizeInput = document.getElementById('grid-size-input');
+        const gridPx = parseInt(gridSizeInput ? gridSizeInput.value : 50) || 50;
+        
+        // 4. Calculate Final Radius
+        const targetScreenRadius = gridPx * squares; 
 
-            if (closest && minDist <= radius) {
-                points.push(closest);
-            } else {
-                points.push({ x: cx + dx*radius, y: cy + dy*radius });
-            }
-        }
+        // Convert to Canvas Coordinates
+        const radiusX = targetScreenRadius * scaleX;
+        const radiusY = targetScreenRadius * scaleY;
 
+        if (!Number.isFinite(cx) || !Number.isFinite(cy)) return;
+
+        // Draw (Symmetry Fix included)
         ctx.save();
-        ctx.beginPath();
-        if(points.length > 0) {
-            ctx.moveTo(points[0].x, points[0].y);
-            points.forEach(p => ctx.lineTo(p.x, p.y));
-        }
-        ctx.closePath();
-        ctx.clip(); 
+        ctx.translate(cx, cy);
+        ctx.scale(1, radiusY / radiusX); 
 
-        const grad = ctx.createRadialGradient(cx, cy, radius * 0.2, cx, cy, radius);
-        grad.addColorStop(0, 'rgba(0,0,0,1)');
-        grad.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(cx-radius, cy-radius, radius*2, radius*2); 
-        ctx.restore();
+        const gradient = ctx.createRadialGradient(0, 0, radiusX * 0.4, 0, 0, radiusX);
+        gradient.addColorStop(0, 'rgba(0,0,0,1)'); 
+        gradient.addColorStop(1, 'rgba(0,0,0,0)'); 
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, radiusX, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore(); 
     });
 
     ctx.globalCompositeOperation = 'source-over';
-    if(window.fog && window.fog.broadcast) window.fog.broadcast();
-    
-    // Only show toast if triggered by user click (not auto-load)
-    if (window.event && window.event.type === 'click') {
-        window.showToast("Vision Updated", "success");
+
+    if(window.fog && window.fog.broadcast) {
+        window.fog.broadcast();
     }
 };
+
 
 // ==========================================
 // 🟢 WALL DELETION & MANAGEMENT
@@ -12100,10 +12083,7 @@ window.isWallEraserActive = false;
 
 // 1. TOGGLE ERASER MODE
 window.toggleWallEraser = () => {
-    if (!window.isProUser) {
-    if (window.event && window.event.isTrusted) window.openProMenu();
-    return; 
-}
+    
     // Turn off Draw Mode if active
     if(window.isDrawingWall) window.toggleWallTool();
 
@@ -12165,7 +12145,7 @@ function deleteWallAtClick(e) {
 
 // 🟢 BONUS: UNDO LAST WALL
 window.undoLastWall = () => {
-    if (!window.isProUser) return window.openProMenu();
+    
     if(window.walls.length > 0) {
         window.walls.pop();
         renderWalls();
@@ -12199,10 +12179,7 @@ window.isGridVisible = false;
 
 // 1. TOGGLE VISIBILITY
 window.toggleGridVisibility = () => {
-    if (!window.isProUser) {
-    if (window.event && window.event.isTrusted) window.openProMenu();
-    return; 
-}
+    
     window.isGridVisible = !window.isGridVisible;
     const btn = document.getElementById('btn-grid-vis');
     
@@ -12221,10 +12198,7 @@ window.toggleGridVisibility = () => {
 // 🟢 RENDER GRID (DM Side - Saves Native Size)
 // ==========================================
 window.renderGrid = () => {
-    if (!window.isProUser) {
-        if (window.event && window.event.isTrusted) window.openProMenu();
-        return; 
-    }
+    
 
     // 1. Get Elements
     const container = document.getElementById('dm-map-container');
@@ -12541,7 +12515,134 @@ setTimeout(() => {
         if(window.fog) window.fog.init(); 
     }, 1000);
 
- 
+ window.toggleTokenVision = async () => {
+    if (!window.selectedTokenId) return;
+    
+    // 1. Get current state from the DOM element
+    const tokenEl = document.getElementById(`token-${window.selectedTokenId}`);
+    const currentSight = tokenEl.dataset.hasSight === "true";
+    const newSight = !currentSight; // Flip it
+
+    // 2. Update Database
+    await window.updateDoc(window.doc(window.db, `artifacts/default/sessions/${window.userId}/vtt_tokens`, window.selectedTokenId), { 
+        hasSight: newSight 
+    });
+
+    // 3. Update Visuals
+    tokenEl.dataset.hasSight = newSight;
+    if (newSight) {
+        window.showToast("Vision Enabled");
+        window.revealTokenVision();
+    } else {
+        window.showToast("Vision Disabled");
+        // We don't auto-fill fog back in (too complex), but it stops clearing moving forward.
+    }
+    document.getElementById('token-context-menu').classList.add('hidden');
+};
+
+
+
+window.changeTokenVisionRange = async () => {
+    // 1. Safety Check
+    if (!window.selectedTokenId) return;
+
+    // 2. Get Current Value (for the prompt default)
+    const tokenEl = document.getElementById(`token-${window.selectedTokenId}`);
+    const currentRange = parseFloat(tokenEl.dataset.visionRange) || 30;
+
+    // 3. Ask User
+    const newRangeStr = prompt(`Enter new vision range in FEET for this token:`, currentRange);
+    
+    // If user clicked Cancel, stop.
+    if (newRangeStr === null) return; 
+
+    const newRange = parseFloat(newRangeStr);
+    if (isNaN(newRange) || newRange < 0) {
+        return alert("Please enter a valid positive number.");
+    }
+
+    // 4. Update Database
+    try {
+        await window.updateDoc(window.doc(window.db, `artifacts/default/sessions/${window.userId}/vtt_tokens`, window.selectedTokenId), { 
+            visionRange: newRange 
+        });
+
+        // 5. Instant Visual Update (Before DB syncs)
+        tokenEl.dataset.visionRange = newRange;
+        window.revealTokenVision(); // Redraw Fog
+        window.showToast(`Vision set to ${newRange}ft`);
+        
+    } catch (err) {
+        console.error("Error updating vision:", err);
+        window.showToast("Failed to update vision");
+    }
+
+    // Close Menu
+    document.getElementById('token-context-menu').classList.add('hidden');
+};
+
+// 🟢 RENDER WALLS (Visuals for DM)
+window.renderWalls = () => {
+    const svg = document.getElementById('wall-layer');
+    const container = document.getElementById('visual-container'); // or 'map-container' depending on your ID
+    
+    if (!svg || !container) return;
+
+    // 1. Sync Resolution
+    // Walls are saved as %, so we don't strictly need to resize the SVG canvas if it's 100% width/height,
+    // but it's good practice to ensure the viewbox matches if you use one.
+    
+    // 2. Clear old lines
+    svg.innerHTML = '';
+
+    // 3. Draw new lines
+    const walls = window.walls || [];
+    
+    walls.forEach((w, index) => {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        
+        // Coordinates are already in % (0-100)
+        line.setAttribute("x1", `${w.x1}%`);
+        line.setAttribute("y1", `${w.y1}%`);
+        line.setAttribute("x2", `${w.x2}%`);
+        line.setAttribute("y2", `${w.y2}%`);
+        
+        // Style: Bright Red, Thick
+        line.setAttribute("stroke", "#ef4444"); // Tailwind red-500
+        line.setAttribute("stroke-width", "4");
+        line.setAttribute("stroke-linecap", "round");
+        line.setAttribute("class", "cursor-pointer hover:stroke-white transition-colors");
+        
+        // Right-click to delete logic
+        line.oncontextmenu = (e) => {
+            e.preventDefault();
+            if(confirm("Delete this wall?")) {
+                window.walls.splice(index, 1);
+                window.saveWalls(); // Ensure this saves to Firebase
+                window.renderWalls();
+                window.revealTokenVision(); // Update fog immediately
+            }
+        };
+
+        svg.appendChild(line);
+    });
+};
+
+// 🟢 LINK GRID TO VISION
+// This ensures that when you change the grid size, the 30ft vision 
+// instantly scales up or down to match the new square size.
+const gridInput = document.getElementById('grid-size-input');
+
+if (gridInput) {
+    gridInput.addEventListener('input', () => {
+        // 1. Existing grid logic usually runs here (drawing lines)
+        
+        // 2. FORCE FOG UPDATE
+        window.revealTokenVision(); 
+    });
+}
+
+
 
 </script>
 
@@ -12949,21 +13050,35 @@ setTimeout(() => {
             <input type="text" id="new-token-name" placeholder="e.g. Goblin King" class="w-full bg-[#0b0c10] border border-gray-700 text-white p-2.5 rounded outline-none focus:border-indigo-500 transition text-sm font-bold">
         </div>
 
-        <div class="mb-3">
-            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Size Category</label>
-            <select id="new-token-size" class="w-full bg-[#0b0c10] border border-gray-700 text-white p-2.5 rounded outline-none focus:border-indigo-500 transition text-xs font-bold cursor-pointer">
-                <option value="0.5">Tiny (0.5x)</option>
-                <option value="1" selected>Medium / Small (1x)</option>
-                <option value="2">Large (2x)</option>
-                <option value="3">Huge (3x)</option>
-                <option value="4">Gargantuan (4x)</option>
-            </select>
-        </div>
+        <div class="grid grid-cols-2 gap-3 mb-4">
+    <div>
+        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Size Category</label>
+        <select id="new-token-size" class="w-full bg-[#0b0c10] border border-gray-700 text-white p-2.5 rounded outline-none focus:border-indigo-500 transition text-xs font-bold cursor-pointer">
+            <option value="0.5">Tiny (0.5x)</option>
+            <option value="1" selected>Medium (1x)</option>
+            <option value="2">Large (2x)</option>
+            <option value="3">Huge (3x)</option>
+            <option value="4">Gargantuan (4x)</option>
+        </select>
+    </div>
+
+    <div>
+        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Vision Range (Feet)</label>
+        <input type="number" id="new-token-vision-range" value="30" step="5" min="0" class="w-full bg-[#0b0c10] border border-gray-700 text-white p-2.5 rounded outline-none focus:border-indigo-500 transition text-xs font-bold" title="Distance in Feet (e.g. 60 = 12 squares)">
+    </div>
+</div>
 
         <div class="mb-6">
             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Token Image</label>
             <input type="file" id="new-token-file" accept="image/*" class="w-full text-xs text-gray-400 file:bg-gray-800 file:text-indigo-300 file:font-bold file:border-0 file:py-2 file:px-4 file:rounded file:mr-4 hover:file:bg-gray-700 cursor-pointer border border-gray-800 rounded p-1">
         </div>
+
+        <div class="flex items-center gap-2 mb-4 bg-gray-800 p-2 rounded border border-gray-600">
+    <input type="checkbox" id="new-token-vision" class="w-5 h-5 accent-indigo-500 cursor-pointer">
+    <label for="new-token-vision" class="text-xs text-gray-300 cursor-pointer select-none font-bold">
+        👁️ Enable Vision (Clears Fog)
+    </label>
+</div>
 
         <div class="flex gap-3">
             <button onclick="window.closeTokenModal()" class="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider transition">Cancel</button>
@@ -13004,8 +13119,8 @@ setTimeout(() => {
                 <h3 class="text-xl font-bold text-yellow-400 mb-4">Warlord (Pro)</h3>
                 
                 <ul class="space-y-3 text-sm text-gray-300">
-                    <li class="flex gap-2"><span class="text-yellow-400">👑</span> <strong>Save and Load Maps & Tokens</li>
-                    <li class="flex gap-2"><span class="text-yellow-400">👑</span> <strong>Website Customization (Change Website Color)</li>
+                    <li class="flex gap-2"><span class="text-yellow-400">👑</span> <strong>Support the Adventure!</li>
+                    <li class="flex gap-2"><span class="text-yellow-400">👑</span> <strong>Website Customization (Change Website Color and Notes UI)</li>
                     <li class="flex gap-2"><span class="text-yellow-400">👑</span> <strong>Get rid of Pop-Up Ads</li>
                 </ul>
                 
@@ -13165,6 +13280,14 @@ setTimeout(() => {
 
 <button onclick="window.promptTokenCustomSize()" class="text-left px-4 py-2 text-xs text-indigo-300 hover:bg-indigo-600 hover:text-white transition font-bold border-t border-gray-700 mt-1">
     ⚙️ Custom (px)...
+</button>
+
+<button onclick="window.toggleTokenVision()" class="text-left px-4 py-2 text-xs text-indigo-300 hover:bg-indigo-600 hover:text-white transition w-full">
+    👁️ Toggle Vision
+</button>
+
+<button onclick="window.changeTokenVisionRange()" class="text-left px-4 py-2 text-xs text-indigo-300 hover:bg-indigo-600 hover:text-white transition w-full font-bold flex items-center gap-2">
+    📏 Set Vision Range
 </button>
 
 <div class="h-px bg-gray-700 my-1"></div>
